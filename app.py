@@ -61,42 +61,65 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- HELPER: CLEAN NUMERIC ---
+def clean_numeric(value):
+    if pd.isna(value):
+        return 0.0
+    if isinstance(value, str):
+        # Remove $, %, and commas
+        clean_val = value.replace('$', '').replace('%', '').replace(',', '').strip()
+        try:
+            return float(clean_val)
+        except:
+            return 0.0
+    return float(value)
+
 # --- DATA CONNECTION ---
-@st.cache_data(ttl=60) # Refresh every minute
+@st.cache_data(ttl=60)
 def load_data():
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # 1. Load Live Data (Assume first sheet or Dashboard_Live)
-        # Using read() without worksheet name often works better for public sheets
-        df_live = conn.read(ttl=0) 
+        # 1. Load Live Data
+        df_live = conn.read(ttl=0)
+        # Clean numeric columns for Live Data
+        for col in ['Balance', 'Equity', 'CurrentDD %']:
+            if col in df_live.columns:
+                df_live[col] = df_live[col].apply(clean_numeric)
         
-        # 2. Load History Data
-        # If worksheet name fails, we try to load it specifically or fallback
+        # 2. Load History Data (Direct CSV Link set for more reliability)
         try:
+            # We try to get the spreadsheet ID from secrets or directly from the URL
+            sheet_url = st.secrets.connections.gsheets.spreadsheet
+            sheet_id = sheet_url.split("/d/")[1].split("/")[0]
+            # History_Daily is typically the second sheet, but using GID is safer 
+            # Or we try the named worksheet again first
             df_history = conn.read(worksheet="History_Daily", ttl=0)
         except:
-            # If explicit name fails, use specific logic or empty df
-            st.sidebar.error("⚠️ Could not find 'History_Daily' tab specifically.")
-            df_history = pd.DataFrame(columns=["Date", "AccountID", "UserEmail", "ClosedProfit", "TotalLots", "MaxDD_Day %"])
-            
+            # Fallback: Try loading from the public CSV export specifically for the 2nd sheet (gid=2040149021 based on your photo)
+            try:
+                csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=2040149021"
+                df_history = pd.read_csv(csv_url)
+            except:
+                st.sidebar.error("⚠️ History data could not be synced.")
+                df_history = pd.DataFrame(columns=["Date", "AccountID", "UserEmail", "ClosedProfit", "TotalLots", "MaxDD_Day %"])
+        
+        # Clean numeric columns for History Data
+        for col in ['ClosedProfit', 'TotalLots', 'MaxDD_Day %']:
+            if col in df_history.columns:
+                df_history[col] = df_history[col].apply(clean_numeric)
+                
         return df_live, df_history
     except Exception as e:
-        # Fallback to Mock Data if no connection
-        st.sidebar.warning("📊 Running in Demo Mode (No Sheet Connected)")
-        st.sidebar.error(f"Debug Error: {str(e)}")
-        
-        # ... (Mock data remains for safety)
+        st.sidebar.warning("📊 Running in Demo Mode")
+        st.sidebar.error(f"Debug: {str(e)}")
+        # ... (Mock data)
         mock_live = pd.DataFrame([
-            {"AccountID": "21692434", "UserEmail": "customer@email.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 379.46, "Equity": 370.00, "CurrentDD %": 2.5},
+            {"AccountID": "21692434", "UserEmail": "customer@email.com", "LastUpdate": "2024-03-20", "Balance": 379.46, "Equity": 370.0, "CurrentDD %": 2.5},
         ])
         mock_history = pd.DataFrame({
-            "Date": pd.date_range(start="2024-03-01", periods=5),
-            "AccountID": ["21692434"] * 5,
-            "UserEmail": ["customer@email.com"] * 5,
-            "ClosedProfit": [10.0, 15.0, -5.0, 20.0, 30.0],
-            "TotalLots": [0.01] * 5,
-            "MaxDD_Day %": [0.5] * 5
+            "Date": ["2024-03-01"], "AccountID": ["21692434"], "UserEmail": ["customer@email.com"], 
+            "ClosedProfit": [10.0], "TotalLots": [0.01], "MaxDD_Day %": [0.5]
         })
         return mock_live, mock_history
 
