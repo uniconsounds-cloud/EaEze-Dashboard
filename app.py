@@ -72,22 +72,24 @@ def load_data():
     except Exception as e:
         # Fallback to Mock Data if no connection
         st.sidebar.warning("📊 Running in Demo Mode (No Sheet Connected)")
+        st.sidebar.error(f"Debug Error: {str(e)}")
         
         # Mock Live Data
         mock_live = pd.DataFrame([
             {"AccountID": "11111", "UserEmail": "demo@ea-eze.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 10000.00, "Equity": 9500.00, "CurrentDD %": 5.0},
             {"AccountID": "22222", "UserEmail": "test@ea-eze.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 25000.00, "Equity": 24800.00, "CurrentDD %": 0.8},
+            {"AccountID": "21692434", "UserEmail": "user@ea-eze.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 5000.00, "Equity": 4500.00, "CurrentDD %": 10.0},
         ])
         
         # Mock History Data
         dates = pd.date_range(start="2024-03-01", periods=10)
         mock_history = pd.DataFrame({
-            "Date": dates.repeat(2),
-            "AccountID": ["11111", "22222"] * 10,
-            "UserEmail": ["demo@ea-eze.com", "test@ea-eze.com"] * 10,
-            "ClosedProfit": [100.0, 150.0, -50.0, 200.0, 300.0, -20.0, 400.0, 100.0, -100.0, 500.0] * 2,
-            "TotalLots": [0.1, 0.2] * 10,
-            "MaxDD_Day %": [1.0, 0.5] * 10
+            "Date": dates.repeat(3),
+            "AccountID": ["11111", "22222", "21692434"] * 10,
+            "UserEmail": ["demo@ea-eze.com", "test@ea-eze.com", "user@ea-eze.com"] * 10,
+            "ClosedProfit": [100.0, 150.0, 50.0, 200.0, 300.0, 100.0, 400.0, 100.0, 50.0, 500.0] * 3,
+            "TotalLots": [0.1, 0.2, 0.05] * 10,
+            "MaxDD_Day %": [1.0, 0.5, 2.0] * 10
         })
         return mock_live, mock_history
 
