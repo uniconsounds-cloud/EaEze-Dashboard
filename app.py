@@ -62,44 +62,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- DATA CONNECTION ---
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=60) # Refresh every minute
 def load_data():
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-        df_live = conn.read(worksheet="Dashboard_Live")
-        df_history = conn.read(worksheet="History_Daily")
+        
+        # 1. Load Live Data (Assume first sheet or Dashboard_Live)
+        # Using read() without worksheet name often works better for public sheets
+        df_live = conn.read(ttl=0) 
+        
+        # 2. Load History Data
+        # If worksheet name fails, we try to load it specifically or fallback
+        try:
+            df_history = conn.read(worksheet="History_Daily", ttl=0)
+        except:
+            # If explicit name fails, use specific logic or empty df
+            st.sidebar.error("⚠️ Could not find 'History_Daily' tab specifically.")
+            df_history = pd.DataFrame(columns=["Date", "AccountID", "UserEmail", "ClosedProfit", "TotalLots", "MaxDD_Day %"])
+            
         return df_live, df_history
     except Exception as e:
-        # Debug: Try a more generic read if specific worksheets fail
-        try:
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            # Try reading without a worksheet name (fetches the first sheet)
-            df_test = conn.read(ttl=0) 
-            st.sidebar.info("✅ Connected to Spreadsheet, but Worksheet names might be wrong.")
-            st.sidebar.write("First Sheet Sample Columns:", df_test.columns.tolist())
-        except:
-            pass
-
         # Fallback to Mock Data if no connection
         st.sidebar.warning("📊 Running in Demo Mode (No Sheet Connected)")
         st.sidebar.error(f"Debug Error: {str(e)}")
         
-        # Mock Live Data
+        # ... (Mock data remains for safety)
         mock_live = pd.DataFrame([
-            {"AccountID": "11111", "UserEmail": "demo@ea-eze.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 10000.00, "Equity": 9500.00, "CurrentDD %": 5.0},
-            {"AccountID": "22222", "UserEmail": "test@ea-eze.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 25000.00, "Equity": 24800.00, "CurrentDD %": 0.8},
-            {"AccountID": "21692434", "UserEmail": "user@ea-eze.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 5000.00, "Equity": 4500.00, "CurrentDD %": 10.0},
+            {"AccountID": "21692434", "UserEmail": "customer@email.com", "LastUpdate": "2024-03-20 12:00:00", "Balance": 379.46, "Equity": 370.00, "CurrentDD %": 2.5},
         ])
-        
-        # Mock History Data
-        dates = pd.date_range(start="2024-03-01", periods=10)
         mock_history = pd.DataFrame({
-            "Date": dates.repeat(3),
-            "AccountID": ["11111", "22222", "21692434"] * 10,
-            "UserEmail": ["demo@ea-eze.com", "test@ea-eze.com", "user@ea-eze.com"] * 10,
-            "ClosedProfit": [100.0, 150.0, 50.0, 200.0, 300.0, 100.0, 400.0, 100.0, 50.0, 500.0] * 3,
-            "TotalLots": [0.1, 0.2, 0.05] * 10,
-            "MaxDD_Day %": [1.0, 0.5, 2.0] * 10
+            "Date": pd.date_range(start="2024-03-01", periods=5),
+            "AccountID": ["21692434"] * 5,
+            "UserEmail": ["customer@email.com"] * 5,
+            "ClosedProfit": [10.0, 15.0, -5.0, 20.0, 30.0],
+            "TotalLots": [0.01] * 5,
+            "MaxDD_Day %": [0.5] * 5
         })
         return mock_live, mock_history
 
