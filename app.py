@@ -70,6 +70,16 @@ def load_data():
         df_history = conn.read(worksheet="History_Daily")
         return df_live, df_history
     except Exception as e:
+        # Debug: Try a more generic read if specific worksheets fail
+        try:
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            # Try reading without a worksheet name (fetches the first sheet)
+            df_test = conn.read(ttl=0) 
+            st.sidebar.info("✅ Connected to Spreadsheet, but Worksheet names might be wrong.")
+            st.sidebar.write("First Sheet Sample Columns:", df_test.columns.tolist())
+        except:
+            pass
+
         # Fallback to Mock Data if no connection
         st.sidebar.warning("📊 Running in Demo Mode (No Sheet Connected)")
         st.sidebar.error(f"Debug Error: {str(e)}")
