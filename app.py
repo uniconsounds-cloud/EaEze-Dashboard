@@ -330,12 +330,14 @@ if account_id:
             sel_month = st.selectbox("Select Month", month_names, index=now.month - 1)
             sel_year = st.number_input("Select Year", min_value=2020, max_value=2030, value=now.year)
             
+            # Set Sunday as first day of week
+            calendar.setfirstweekday(calendar.SUNDAY)
             month_idx = list(calendar.month_name).index(sel_month)
             cal_grid = calendar.monthcalendar(sel_year, month_idx)
             
             # Header
             cols = st.columns(7)
-            days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
             for i, d in enumerate(days):
                 cols[i].markdown(f"<div class='cal-day-header'>{d}</div>", unsafe_allow_html=True)
             
@@ -427,14 +429,41 @@ if account_id:
         with tabs[2]:
             st.markdown("### 📊 Weekly Performance Overview")
             
+            # --- WEEKLY NAVIGATION ---
+            if 'wk_offset' not in st.session_state:
+                st.session_state.wk_offset = 0
+            
+            nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
+            with nav_col1:
+                if st.button("⬅️ Previous Week"):
+                    st.session_state.wk_offset += 1
+                    st.rerun()
+            with nav_col3:
+                if st.button("Next Week ➡️", disabled=(st.session_state.wk_offset == 0)):
+                    st.session_state.wk_offset -= 1
+                    st.rerun()
+            with nav_col2:
+                # Reset button
+                if st.button("🏠 Current Week", use_container_width=True):
+                    st.session_state.wk_offset = 0
+                    st.rerun()
+
+            # Calculate Week Range
+            # We want to show a 7-day range ending at (Today - offset*7)
+            end_of_week = date.today() - timedelta(days=st.session_state.wk_offset * 7)
+            # Adjust to end on stable Saturday or relative to offset? 
+            # Let's just show trailing 7 days from the offset point.
+            
             if not history_info.empty:
-                last_7_days = []
-                base = date.today()
+                view_days = []
                 for i in range(6, -1, -1):
-                    last_7_days.append(base - timedelta(days=i))
+                    view_days.append(end_of_week - timedelta(days=i))
                 
+                # Header with Date Range Display
+                st.info(f"📅 View Range: {view_days[0].strftime('%d %b %Y')} - {view_days[-1].strftime('%d %b %Y')}")
+
                 cols = st.columns(7)
-                for i, cur_date in enumerate(last_7_days):
+                for i, cur_date in enumerate(view_days):
                     is_weekend = cur_date.weekday() >= 5
                     stats = daily_stats.get(cur_date, None) if not is_weekend else None
                     
@@ -465,8 +494,11 @@ if account_id:
                 
                 # --- WEEKLY SUMMARY FOOTER ---
                 st.markdown("---")
-                # Filter data for last 7 days
-                wk_data = history_info[pd.to_datetime(history_info['Date']).dt.date >= (date.today() - timedelta(days=6))]
+                # Filter data for the viewed week
+                wk_data = history_info[
+                    (pd.to_datetime(history_info['Date']).dt.date >= view_days[0]) & 
+                    (pd.to_datetime(history_info['Date']).dt.date <= view_days[-1])
+                ]
                 
                 if not wk_data.empty:
                     t_profit = wk_data['ClosedProfit'].sum()
@@ -492,8 +524,10 @@ if account_id:
                                 <div class="summary-value">${val:,.2f}</div>
                             </div>
                         """, unsafe_allow_html=True)
+                else:
+                    st.info("No trading activity found for this specific week.")
             else:
-                st.warning("No activity found in the last 7 days.")
+                st.warning("No trade history available.")
 
     else:
         # ID NOT FOUND
