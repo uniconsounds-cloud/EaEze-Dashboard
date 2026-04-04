@@ -61,14 +61,15 @@ st.markdown("""
         background: rgba(0, 212, 255, 0.05);
         border: 1px solid #00D4FF;
         border-radius: 12px;
-        padding: 15px 10px;
+        padding: 20px 10px;
         text-align: center;
-        min-height: 100px;
+        min-height: 120px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
         transition: all 0.3s ease;
+        position: relative;
     }
     
     .cal-card:hover {
@@ -76,23 +77,41 @@ st.markdown("""
         transform: scale(1.02);
     }
     
-    .cal-date {
-        font-size: 0.8rem;
+    .cal-header-info {
+        font-size: 0.7rem;
         color: #888;
         position: absolute;
         top: 5px;
         left: 10px;
     }
     
+    .cal-footer-left {
+        font-size: 0.65rem;
+        color: #00D4FF;
+        position: absolute;
+        bottom: 5px;
+        left: 10px;
+        opacity: 0.8;
+    }
+    
+    .cal-footer-right {
+        font-size: 0.65rem;
+        color: #E0E0E0;
+        position: absolute;
+        bottom: 5px;
+        right: 10px;
+        opacity: 0.9;
+    }
+    
     .cal-profit {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         font-weight: 800;
         color: #00D4FF;
         text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
     }
     
     .cal-profit-neg {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         font-weight: 800;
         color: #FF4B4B;
         text-shadow: 0 0 10px rgba(255, 75, 75, 0.5);
@@ -108,17 +127,14 @@ st.markdown("""
     /* Mobile Responsiveness */
     @media (max-width: 768px) {
         .cal-profit, .cal-profit-neg {
-            font-size: 1.2rem !important;
+            font-size: 1.1rem !important;
         }
         .cal-card {
-            min-height: 70px !important;
-            padding: 5px !important;
+            min-height: 85px !important;
+            padding: 15px 5px !important;
         }
-        .cal-date {
-            font-size: 0.6rem !important;
-        }
-        [data-testid="column"] {
-            padding: 10px !important;
+        .cal-header-info, .cal-footer-left, .cal-footer-right {
+            font-size: 0.5rem !important;
         }
     }
 </style>
@@ -295,41 +311,58 @@ if account_id:
             for i, d in enumerate(days):
                 cols[i].markdown(f"<div class='cal-day-header'>{d}</div>", unsafe_allow_html=True)
             
-            # Calendar Rendering
-            # Convert history dates to strings for easier lookup
+            # Calendar Rendering logic
             if not history_info.empty:
-                history_info['NetProfit'] = history_info['ClosedProfit'] + history_info['Rebate']
+                # Group by date to get Profit and Rebate separately
                 history_info['DateStr'] = pd.to_datetime(history_info['Date']).dt.date
-                profit_map = history_info.groupby('DateStr')['NetProfit'].sum().to_dict()
+                daily_stats = history_info.groupby('DateStr').agg({
+                    'ClosedProfit': 'sum',
+                    'Rebate': 'sum'
+                }).to_dict('index')
             else:
-                profit_map = {}
+                daily_stats = {}
 
             for week in cal_grid:
                 cols = st.columns(7)
                 for i, day in enumerate(week):
                     if day == 0:
-                        cols[i].markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
+                        cols[i].markdown("<div style='min-height: 120px;'></div>", unsafe_allow_html=True)
                     else:
                         cur_date = date(sel_year, month_idx, day)
-                        # Hide Sunday (6) and Saturday (5)
+                        # Hide Saturday (5) & Sunday (6)
                         is_weekend = cur_date.weekday() >= 5
-                        profit = profit_map.get(cur_date, None) if not is_weekend else None
+                        stats = daily_stats.get(cur_date, None) if not is_weekend else None
                         
-                        box_class = "cal-profit" if (profit is not None and profit >= 0) else "cal-profit-neg"
-                        profit_text = f"${profit:,.2f}" if profit is not None else "-"
-                        
-                        cols[i].markdown(f"""
-                            <div class="cal-card">
-                                <div class="cal-date">{day}</div>
-                                <div class="{box_class}">{profit_text}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        if stats:
+                            profit = stats['ClosedProfit']
+                            rebate = stats['Rebate']
+                            total = profit + rebate
+                            
+                            box_class = "cal-profit" if profit >= 0 else "cal-profit-neg"
+                            p_text = f"${profit:,.1f}" if abs(profit) < 1000 else f"${profit/1000:,.1f}k"
+                            r_text = f"R: ${rebate:,.1f}"
+                            t_text = f"T: ${total:,.1f}"
+                            
+                            cols[i].markdown(f"""
+                                <div class="cal-card">
+                                    <div class="cal-header-info">{day}</div>
+                                    <div class="{box_class}">{p_text}</div>
+                                    <div class="cal-footer-left">{r_text}</div>
+                                    <div class="cal-footer-right">{t_text}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            cols[i].markdown(f"""
+                                <div class="cal-card">
+                                    <div class="cal-header-info">{day}</div>
+                                    <div class="cal-profit" style="opacity: 0.2;">-</div>
+                                </div>
+                            """, unsafe_allow_html=True)
 
         # --- TAB 3: WEEKLY VIEW (Horizontal) ---
         with tabs[2]:
             st.markdown("### 📊 Weekly Performance Overview")
             
-            # Get last 7 days of trading
             if not history_info.empty:
                 last_7_days = []
                 base = date.today()
@@ -338,18 +371,33 @@ if account_id:
                 
                 cols = st.columns(7)
                 for i, cur_date in enumerate(last_7_days):
-                    # Hide Weekend
                     is_weekend = cur_date.weekday() >= 5
-                    profit = profit_map.get(cur_date, None) if not is_weekend else None
-                    box_class = "cal-profit" if (profit is not None and profit >= 0) else "cal-profit-neg"
-                    profit_text = f"${profit:,.2f}" if profit is not None else "-"
+                    stats = daily_stats.get(cur_date, None) if not is_weekend else None
                     
-                    cols[i].markdown(f"""
-                        <div class="cal-card">
-                            <div class="cal-date">{cur_date.strftime('%d/%m')}</div>
-                            <div class="{box_class}">{profit_text}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    if stats:
+                        profit = stats['ClosedProfit']
+                        rebate = stats['Rebate']
+                        total = profit + rebate
+                        box_class = "cal-profit" if profit >= 0 else "cal-profit-neg"
+                        p_text = f"${profit:,.1f}"
+                        r_text = f"R: ${rebate:,.1f}"
+                        t_text = f"T: ${total:,.1f}"
+                        
+                        cols[i].markdown(f"""
+                            <div class="cal-card">
+                                <div class="cal-header-info">{cur_date.strftime('%d/%m')}</div>
+                                <div class="{box_class}">{p_text}</div>
+                                <div class="cal-footer-left">{r_text}</div>
+                                <div class="cal-footer-right">{t_text}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        cols[i].markdown(f"""
+                            <div class="cal-card">
+                                <div class="cal-header-info">{cur_date.strftime('%d/%m')}</div>
+                                <div class="cal-profit" style="opacity: 0.2;">-</div>
+                            </div>
+                        """, unsafe_allow_html=True)
             else:
                 st.warning("No activity found in the last 7 days.")
 
