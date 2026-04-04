@@ -82,38 +82,49 @@ def load_data():
         
         # 1. Load Live Data
         df_live = conn.read(ttl=0)
-        # Clean numeric columns for Live Data
-        for col in ['Balance', 'Equity', 'CurrentDD %']:
+        # Convert Cent to Standard USD for Live Data
+        for col in ['Balance', 'Equity']:
             if col in df_live.columns:
-                df_live[col] = df_live[col].apply(clean_numeric)
+                df_live[col] = df_live[col].apply(clean_numeric) / 100.0
         
-        # 2. Load History Data (Direct CSV Link set for more reliability)
+        # Drawdown is usually a percentage, so keep it as is after cleaning
+        if 'CurrentDD %' in df_live.columns:
+            df_live['CurrentDD %'] = df_live['CurrentDD %'].apply(clean_numeric)
+        
+        # 2. Load History Data (Direct CSV Link)
         try:
             sheet_url = st.secrets.connections.gsheets.spreadsheet
             sheet_id = sheet_url.split("/d/")[1].split("/")[0]
-            # Use the exact GID provided by the user for History_Daily
             url_history = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=379227189"
             df_history = pd.read_csv(url_history)
         except Exception as e:
             st.sidebar.error(f"⚠️ History sync error: {str(e)}")
             df_history = pd.DataFrame(columns=["Date", "AccountID", "UserEmail", "ClosedProfit", "TotalLots", "MaxDD_Day %"])
         
-        # Clean numeric columns for History Data
-        for col in ['ClosedProfit', 'TotalLots', 'MaxDD_Day %']:
-            if col in df_history.columns:
-                df_history[col] = df_history[col].apply(clean_numeric)
+        # Convert Cent to Standard for History Data
+        if 'ClosedProfit' in df_history.columns:
+            df_history['ClosedProfit'] = df_history['ClosedProfit'].apply(clean_numeric) / 100.0
+        
+        if 'TotalLots' in df_history.columns:
+            # Standard Lots = Cent Lots / 100
+            df_history['StandardLots'] = df_history['TotalLots'].apply(clean_numeric) / 100.0
+            # Rebate calculation ($15 per Standard Lot)
+            df_history['Rebate'] = df_history['StandardLots'] * 15.0
+            
+        if 'MaxDD_Day %' in df_history.columns:
+            df_history['MaxDD_Day %'] = df_history['MaxDD_Day %'].apply(clean_numeric)
                 
         return df_live, df_history
     except Exception as e:
         st.sidebar.warning("📊 Running in Demo Mode")
         st.sidebar.error(f"Debug: {str(e)}")
-        # ... (Mock data)
+        # ... (Mock data with cent-to-standard logic)
         mock_live = pd.DataFrame([
-            {"AccountID": "21692434", "UserEmail": "customer@email.com", "LastUpdate": "2024-03-20", "Balance": 379.46, "Equity": 370.0, "CurrentDD %": 2.5},
+            {"AccountID": "21692434", "UserEmail": "customer@email.com", "LastUpdate": "2024-03-20", "Balance": 737.03, "Equity": 677.75, "CurrentDD %": 8.48},
         ])
         mock_history = pd.DataFrame({
             "Date": ["2024-03-01"], "AccountID": ["21692434"], "UserEmail": ["customer@email.com"], 
-            "ClosedProfit": [10.0], "TotalLots": [0.01], "MaxDD_Day %": [0.5]
+            "ClosedProfit": [1.0], "StandardLots": [0.01], "Rebate": [0.15], "MaxDD_Day %": [0.5]
         })
         return mock_live, mock_history
 
@@ -183,10 +194,12 @@ if account_id:
             use_container_width=True,
             column_config={
                 "Date": "Date",
-                "ClosedProfit": st.column_config.NumberColumn("Profit", format="$%.2f"),
-                "TotalLots": "Lots",
+                "ClosedProfit": st.column_config.NumberColumn("Profit ($)", format="$%.2f"),
+                "StandardLots": st.column_config.NumberColumn("Lots (Std)", format="%.2f"),
+                "Rebate": st.column_config.NumberColumn("Rebate ($)", format="$%.2f"),
                 "MaxDD_Day %": st.column_config.NumberColumn("Max DD", format="%.2f%%")
-            }
+            },
+            hide_index=True
         )
         
     else:
