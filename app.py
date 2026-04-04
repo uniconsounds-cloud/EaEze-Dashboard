@@ -89,20 +89,14 @@ def load_data():
         
         # 2. Load History Data (Direct CSV Link set for more reliability)
         try:
-            # We try to get the spreadsheet ID from secrets or directly from the URL
             sheet_url = st.secrets.connections.gsheets.spreadsheet
             sheet_id = sheet_url.split("/d/")[1].split("/")[0]
-            # History_Daily is typically the second sheet, but using GID is safer 
-            # Or we try the named worksheet again first
-            df_history = conn.read(worksheet="History_Daily", ttl=0)
-        except:
-            # Fallback: Try loading from the public CSV export specifically for the 2nd sheet (gid=2040149021 based on your photo)
-            try:
-                csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=2040149021"
-                df_history = pd.read_csv(csv_url)
-            except:
-                st.sidebar.error("⚠️ History data could not be synced.")
-                df_history = pd.DataFrame(columns=["Date", "AccountID", "UserEmail", "ClosedProfit", "TotalLots", "MaxDD_Day %"])
+            # Use the exact GID provided by the user for History_Daily
+            url_history = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=379227189"
+            df_history = pd.read_csv(url_history)
+        except Exception as e:
+            st.sidebar.error(f"⚠️ History sync error: {str(e)}")
+            df_history = pd.DataFrame(columns=["Date", "AccountID", "UserEmail", "ClosedProfit", "TotalLots", "MaxDD_Day %"])
         
         # Clean numeric columns for History Data
         for col in ['ClosedProfit', 'TotalLots', 'MaxDD_Day %']:
