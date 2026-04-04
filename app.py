@@ -339,9 +339,9 @@ if account_id:
                             total = profit + rebate
                             
                             box_class = "cal-profit" if profit >= 0 else "cal-profit-neg"
-                            p_text = f"${profit:,.1f}" if abs(profit) < 1000 else f"${profit/1000:,.1f}k"
-                            r_text = f"R: ${rebate:,.1f}"
-                            t_text = f"T: ${total:,.1f}"
+                            p_text = f"${profit:,.2f}"
+                            r_text = f"R: ${rebate:,.2f}"
+                            t_text = f"T: ${total:,.2f}"
                             
                             cols[i].markdown(f"""
                                 <div class="cal-card">
@@ -379,9 +379,9 @@ if account_id:
                         rebate = stats['Rebate']
                         total = profit + rebate
                         box_class = "cal-profit" if profit >= 0 else "cal-profit-neg"
-                        p_text = f"${profit:,.1f}"
-                        r_text = f"R: ${rebate:,.1f}"
-                        t_text = f"T: ${total:,.1f}"
+                        p_text = f"${profit:,.2f}"
+                        r_text = f"R: ${rebate:,.2f}"
+                        t_text = f"T: ${total:,.2f}"
                         
                         cols[i].markdown(f"""
                             <div class="cal-card">
