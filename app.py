@@ -124,29 +124,106 @@ st.markdown("""
         padding-bottom: 10px;
     }
 
-    /* Summary Card Styling */
-    .summary-card {
-        background: rgba(0, 212, 255, 0.1);
-        border: 1px dashed #00D4FF;
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
-        margin-top: 10px;
+    /* Weekly Social Strip (Vertical) */
+    .weekly-strip-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 5px;
+        background: #0E1117;
+        width: 100%;
+        max-width: 1000px;
+        margin: auto;
     }
     
-    .summary-label {
-        font-size: 0.75rem;
+    .weekly-strip-row {
+        height: 12.5vh; /* 6 rows * 12.5% = 75vh total */
+        background: rgba(0, 212, 255, 0.03);
+        border: 1px solid rgba(0, 212, 255, 0.5);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .weekly-strip-row:hover {
+        background: rgba(0, 212, 255, 0.08);
+        border-color: #00D4FF;
+    }
+    
+    .strip-date {
+        flex: 1;
+        font-size: 0.9rem;
         color: #888;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        font-weight: bold;
     }
     
-    .summary-value {
-        font-size: 1.3rem;
+    .strip-profit-center {
+        flex: 2;
+        text-align: center;
+        font-size: 2.2rem;
         font-weight: 800;
         color: #00D4FF;
-        text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
+    }
+    
+    .strip-stats-right {
+        flex: 1;
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .stat-val-highlight {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #FF8C00;
+        text-shadow: 0 0 8px rgba(255, 140, 0, 0.4);
+    }
+    
+    .stat-val-lots {
+        font-size: 1rem;
+        color: #E0E0E0;
+    }
+    
+    .strip-footer-left {
+        position: absolute;
+        bottom: 4px;
+        left: 25px;
+        font-size: 0.6rem;
+        color: #00D4FF;
+        opacity: 0.6;
+    }
+    
+    .strip-footer-right {
+        position: absolute;
+        bottom: 4px;
+        right: 25px;
+        font-size: 0.6rem;
+        color: #E0E0E0;
+        opacity: 0.6;
+    }
+
+    /* Summary Row Variation */
+    .summary-strip-row {
+        height: 12.5vh;
+        background: linear-gradient(90deg, rgba(0, 212, 255, 0.2), transparent);
+        border: 2px dashed #00D4FF;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
     }
 
     /* Mobile Responsiveness */
@@ -158,11 +235,15 @@ st.markdown("""
             min-height: 85px !important;
             padding: 15px 5px !important;
         }
-        .cal-header-info, .cal-footer-left, .cal-footer-right {
-            font-size: 0.5rem !important;
+        .strip-profit-center {
+            font-size: 1.5rem !important;
         }
-        .summary-value {
-            font-size: 1.0rem !important;
+        .stat-val-highlight {
+            font-size: 1.1rem !important;
+        }
+        .weekly-strip-row {
+            height: 11vh !important;
+            padding: 0 10px !important;
         }
     }
 </style>
@@ -425,107 +506,126 @@ if account_id:
                 else:
                     st.info("No data available for the summary of this month.")
 
-        # --- TAB 3: WEEKLY VIEW (Horizontal) ---
+        # --- TAB 3: WEEKLY VIEW (Vertical Social Strip) ---
         with tabs[2]:
-            st.markdown("### 📊 Weekly Performance Overview")
-            
-            # --- WEEKLY NAVIGATION ---
             if 'wk_offset' not in st.session_state:
                 st.session_state.wk_offset = 0
             
             nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
             with nav_col1:
-                if st.button("⬅️ Previous Week"):
+                if st.button("⬅️ Previous Week", key="prev_wk"):
                     st.session_state.wk_offset += 1
                     st.rerun()
             with nav_col3:
-                if st.button("Next Week ➡️", disabled=(st.session_state.wk_offset == 0)):
+                if st.button("Next Week ➡️", disabled=(st.session_state.wk_offset == 0), key="next_wk"):
                     st.session_state.wk_offset -= 1
                     st.rerun()
             with nav_col2:
-                # Reset button
-                if st.button("🏠 Current Week", use_container_width=True):
+                if st.button("🏠 Current Week", use_container_width=True, key="curr_wk"):
                     st.session_state.wk_offset = 0
                     st.rerun()
 
-            # Calculate Week Range
-            # We want to show a 7-day range ending at (Today - offset*7)
             end_of_week = date.today() - timedelta(days=st.session_state.wk_offset * 7)
-            # Adjust to end on stable Saturday or relative to offset? 
-            # Let's just show trailing 7 days from the offset point.
             
             if not history_info.empty:
-                view_days = []
-                for i in range(6, -1, -1):
-                    view_days.append(end_of_week - timedelta(days=i))
-                
-                # Header with Date Range Display
-                st.info(f"📅 View Range: {view_days[0].strftime('%d %b %Y')} - {view_days[-1].strftime('%d %b %Y')}")
+                # 1. Prepare Daily Stats including MaxDD
+                history_info['DateStr'] = pd.to_datetime(history_info['Date']).dt.date
+                daily_agg = history_info.groupby('DateStr').agg({
+                    'ClosedProfit': 'sum',
+                    'Rebate': 'sum',
+                    'TotalLots': 'sum', # Note: Using TotalLots before conversion if needed, but we have StandardLots
+                    'StandardLots': 'sum',
+                    'MaxDD_Day %': 'max'
+                }).to_dict('index')
 
-                cols = st.columns(7)
-                for i, cur_date in enumerate(view_days):
-                    is_weekend = cur_date.weekday() >= 5
-                    stats = daily_stats.get(cur_date, None) if not is_weekend else None
+                # 2. Get Monday to Friday for the selected week
+                # Find the Monday of that week
+                days_to_mon = end_of_week.weekday() # 0 for Mon
+                mon_date = end_of_week - timedelta(days=days_to_mon)
+                work_days = [mon_date + timedelta(days=i) for i in range(5)] # Mon to Fri
+
+                # 3. Render Strips
+                st.markdown('<div class="weekly-strip-container">', unsafe_allow_html=True)
+                
+                for cur_date in work_days:
+                    stats = daily_agg.get(cur_date, None)
+                    date_display = cur_date.strftime('%A') # e.g. Monday
+                    date_sub = cur_date.strftime('%d %b')
                     
                     if stats:
-                        profit = stats['ClosedProfit']
-                        rebate = stats['Rebate']
-                        total = profit + rebate
-                        box_class = "cal-profit" if profit >= 0 else "cal-profit-neg"
-                        p_text = f"${profit:,.2f}"
-                        r_text = f"R: ${rebate:,.2f}"
-                        t_text = f"T: ${total:,.2f}"
+                        p = stats['ClosedProfit']
+                        r = stats['Rebate']
+                        l = stats['StandardLots']
+                        dd = stats['MaxDD_Day %']
+                        t = p + r
                         
-                        cols[i].markdown(f"""
-                            <div class="cal-card">
-                                <div class="cal-header-info">{cur_date.strftime('%d/%m')}</div>
-                                <div class="{box_class}">{p_text}</div>
-                                <div class="cal-footer-left">{r_text}</div>
-                                <div class="cal-footer-right">{t_text}</div>
+                        p_class = "strip-profit-center" if p >= 0 else "strip-profit-center color:#FF4B4B;" # Fallback style
+                        p_color = "#00D4FF" if p >= 0 else "#FF4B4B"
+                        
+                        st.markdown(f"""
+                            <div class="weekly-strip-row">
+                                <div class="strip-date">
+                                    <div style="color:#00D4FF; font-size:1.1rem;">{date_display}</div>
+                                    <div style="font-size:0.7rem; opacity:0.6;">{date_sub}</div>
+                                </div>
+                                <div class="strip-profit-center" style="color:{p_color};">
+                                    ${p:,.2f}
+                                </div>
+                                <div class="strip-stats-right">
+                                    <div class="stat-label">Drawdown</div>
+                                    <div class="stat-val-highlight">{dd:,.2f}%</div>
+                                    <div class="stat-label">Lots: <span class="stat-val-lots">{l:,.2f}</span></div>
+                                </div>
+                                <div class="strip-footer-left">Rebate: ${r:,.2f}</div>
+                                <div class="strip-footer-right">Net: ${t:,.2f}</div>
                             </div>
                         """, unsafe_allow_html=True)
                     else:
-                        cols[i].markdown(f"""
-                            <div class="cal-card">
-                                <div class="cal-header-info">{cur_date.strftime('%d/%m')}</div>
-                                <div class="cal-profit" style="opacity: 0.2;">-</div>
+                        st.markdown(f"""
+                            <div class="weekly-strip-row" style="opacity: 0.3;">
+                                <div class="strip-date">
+                                    <div style="color:#888; font-size:1.1rem;">{date_display}</div>
+                                    <div style="font-size:0.7rem;">{date_sub}</div>
+                                </div>
+                                <div class="strip-profit-center" style="color:#444;">$0.00</div>
+                                <div class="strip-stats-right">
+                                    <div class="stat-label">No Trades</div>
+                                </div>
                             </div>
                         """, unsafe_allow_html=True)
-                
-                # --- WEEKLY SUMMARY FOOTER ---
-                st.markdown("---")
-                # Filter data for the viewed week
+
+                # 4. Summary Strip Row
                 wk_data = history_info[
-                    (pd.to_datetime(history_info['Date']).dt.date >= view_days[0]) & 
-                    (pd.to_datetime(history_info['Date']).dt.date <= view_days[-1])
+                    (pd.to_datetime(history_info['Date']).dt.date >= work_days[0]) & 
+                    (pd.to_datetime(history_info['Date']).dt.date <= work_days[-1])
                 ]
                 
                 if not wk_data.empty:
-                    t_profit = wk_data['ClosedProfit'].sum()
-                    t_lots = wk_data['StandardLots'].sum()
-                    t_rebate = wk_data['Rebate'].sum()
-                    t_net = t_profit + t_rebate
-                    avg_p = t_profit / len(wk_data) if len(wk_data) > 0 else 0
+                    t_p = wk_data['ClosedProfit'].sum()
+                    t_l = wk_data['StandardLots'].sum()
+                    t_r = wk_data['Rebate'].sum()
+                    t_n = t_p + t_r
+                    m_dd = wk_data['MaxDD_Day %'].max()
                     
-                    s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
-                    summary_items = [
-                        ("Week Profit", t_profit),
-                        ("Week Lots", t_lots),
-                        ("Week Rebate", t_rebate),
-                        ("Week Net", t_net),
-                        ("Weekly Avg", avg_p)
-                    ]
-                    
-                    cols_list = [s_col1, s_col2, s_col3, s_col4, s_col5]
-                    for idx, (label, val) in enumerate(summary_items):
-                        cols_list[idx].markdown(f"""
-                            <div class="summary-card">
-                                <div class="summary-label">{label}</div>
-                                <div class="summary-value">${val:,.2f}</div>
+                    st.markdown(f"""
+                        <div class="summary-strip-row">
+                            <div class="strip-date">
+                                <div style="color:#00D4FF; font-size:1rem;">WEEK SUMMARY</div>
                             </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.info("No trading activity found for this specific week.")
+                            <div class="strip-profit-center" style="font-size:1.8rem; color:#FFF;">
+                                ${t_p:,.2f}
+                            </div>
+                            <div class="strip-stats-right">
+                                <div class="stat-label">Max Week DD</div>
+                                <div class="stat-val-highlight" style="color:#00D4FF;">{m_dd:,.2f}%</div>
+                                <div class="stat-label">Total Lots: <span class="stat-val-lots">{t_l:,.2f}</span></div>
+                            </div>
+                            <div class="strip-footer-left">Total Rebate: ${t_r:,.2f}</div>
+                            <div class="strip-footer-right">Total Net: ${t_n:,.2f}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.warning("No trade history available.")
 
