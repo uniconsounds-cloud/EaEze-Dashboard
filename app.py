@@ -187,16 +187,22 @@ if account_id:
         else:
             st.warning("No history data available for this account.")
             
+        # Calculate Net Profit (Profit + Rebate)
+        if not history_info.empty:
+            history_info['NetProfit'] = history_info['ClosedProfit'] + history_info['Rebate']
+
         # ROW 3: TRADE HISTORY TABLE
         st.markdown("### 📜 Trading History")
         st.dataframe(
             history_info.iloc[::-1], # Reversed to show latest first
             use_container_width=True,
+            column_order=("Date", "StandardLots", "ClosedProfit", "Rebate", "NetProfit", "MaxDD_Day %"),
             column_config={
                 "Date": "Date",
-                "ClosedProfit": st.column_config.NumberColumn("Profit ($)", format="$%.2f"),
                 "StandardLots": st.column_config.NumberColumn("Lots (Std)", format="%.2f"),
+                "ClosedProfit": st.column_config.NumberColumn("Profit ($)", format="$%.2f"),
                 "Rebate": st.column_config.NumberColumn("Rebate ($)", format="$%.2f"),
+                "NetProfit": st.column_config.NumberColumn("Total ($)", format="$%.2f"),
                 "MaxDD_Day %": st.column_config.NumberColumn("Max DD", format="%.2f%%")
             },
             hide_index=True
