@@ -124,6 +124,31 @@ st.markdown("""
         padding-bottom: 10px;
     }
 
+    /* Summary Card Styling */
+    .summary-card {
+        background: rgba(0, 212, 255, 0.1);
+        border: 1px dashed #00D4FF;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+        margin-top: 10px;
+    }
+    
+    .summary-label {
+        font-size: 0.75rem;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .summary-value {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: #00D4FF;
+        text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+    }
+
     /* Mobile Responsiveness */
     @media (max-width: 768px) {
         .cal-profit, .cal-profit-neg {
@@ -135,6 +160,9 @@ st.markdown("""
         }
         .cal-header-info, .cal-footer-left, .cal-footer-right {
             font-size: 0.5rem !important;
+        }
+        .summary-value {
+            font-size: 1.0rem !important;
         }
     }
 </style>
@@ -358,6 +386,42 @@ if account_id:
                                     <div class="cal-profit" style="opacity: 0.2;">-</div>
                                 </div>
                             """, unsafe_allow_html=True)
+            
+            # --- MONTHLY SUMMARY FOOTER ---
+            st.markdown("---")
+            if not history_info.empty:
+                # Filter data for selected month
+                m_data = history_info[
+                    (pd.to_datetime(history_info['Date']).dt.month == month_idx) & 
+                    (pd.to_datetime(history_info['Date']).dt.year == sel_year)
+                ]
+                
+                if not m_data.empty:
+                    t_profit = m_data['ClosedProfit'].sum()
+                    t_lots = m_data['StandardLots'].sum()
+                    t_rebate = m_data['Rebate'].sum()
+                    t_net = t_profit + t_rebate
+                    avg_p = t_profit / len(m_data) if len(m_data) > 0 else 0
+                    
+                    s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
+                    summary_items = [
+                        ("Total Profit", t_profit),
+                        ("Total Lots", t_lots),
+                        ("Total Rebate", t_rebate),
+                        ("Net Profit", t_net),
+                        ("Avg / Day", avg_p)
+                    ]
+                    
+                    cols_list = [s_col1, s_col2, s_col3, s_col4, s_col5]
+                    for idx, (label, val) in enumerate(summary_items):
+                        cols_list[idx].markdown(f"""
+                            <div class="summary-card">
+                                <div class="summary-label">{label}</div>
+                                <div class="summary-value">${val:,.2f}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("No data available for the summary of this month.")
 
         # --- TAB 3: WEEKLY VIEW (Horizontal) ---
         with tabs[2]:
@@ -396,6 +460,36 @@ if account_id:
                             <div class="cal-card">
                                 <div class="cal-header-info">{cur_date.strftime('%d/%m')}</div>
                                 <div class="cal-profit" style="opacity: 0.2;">-</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                
+                # --- WEEKLY SUMMARY FOOTER ---
+                st.markdown("---")
+                # Filter data for last 7 days
+                wk_data = history_info[pd.to_datetime(history_info['Date']).dt.date >= (date.today() - timedelta(days=6))]
+                
+                if not wk_data.empty:
+                    t_profit = wk_data['ClosedProfit'].sum()
+                    t_lots = wk_data['StandardLots'].sum()
+                    t_rebate = wk_data['Rebate'].sum()
+                    t_net = t_profit + t_rebate
+                    avg_p = t_profit / len(wk_data) if len(wk_data) > 0 else 0
+                    
+                    s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
+                    summary_items = [
+                        ("Week Profit", t_profit),
+                        ("Week Lots", t_lots),
+                        ("Week Rebate", t_rebate),
+                        ("Week Net", t_net),
+                        ("Weekly Avg", avg_p)
+                    ]
+                    
+                    cols_list = [s_col1, s_col2, s_col3, s_col4, s_col5]
+                    for idx, (label, val) in enumerate(summary_items):
+                        cols_list[idx].markdown(f"""
+                            <div class="summary-card">
+                                <div class="summary-label">{label}</div>
+                                <div class="summary-value">${val:,.2f}</div>
                             </div>
                         """, unsafe_allow_html=True)
             else:
