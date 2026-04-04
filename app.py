@@ -104,6 +104,23 @@ st.markdown("""
         color: #00D4FF;
         padding-bottom: 10px;
     }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .cal-profit, .cal-profit-neg {
+            font-size: 1.2rem !important;
+        }
+        .cal-card {
+            min-height: 70px !important;
+            padding: 5px !important;
+        }
+        .cal-date {
+            font-size: 0.6rem !important;
+        }
+        [data-testid="column"] {
+            padding: 10px !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -294,7 +311,9 @@ if account_id:
                         cols[i].markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
                     else:
                         cur_date = date(sel_year, month_idx, day)
-                        profit = profit_map.get(cur_date, None)
+                        # Hide Sunday (6) and Saturday (5)
+                        is_weekend = cur_date.weekday() >= 5
+                        profit = profit_map.get(cur_date, None) if not is_weekend else None
                         
                         box_class = "cal-profit" if (profit is not None and profit >= 0) else "cal-profit-neg"
                         profit_text = f"${profit:,.2f}" if profit is not None else "-"
@@ -319,7 +338,9 @@ if account_id:
                 
                 cols = st.columns(7)
                 for i, cur_date in enumerate(last_7_days):
-                    profit = profit_map.get(cur_date, None)
+                    # Hide Weekend
+                    is_weekend = cur_date.weekday() >= 5
+                    profit = profit_map.get(cur_date, None) if not is_weekend else None
                     box_class = "cal-profit" if (profit is not None and profit >= 0) else "cal-profit-neg"
                     profit_text = f"${profit:,.2f}" if profit is not None else "-"
                     
