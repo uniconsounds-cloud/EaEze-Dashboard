@@ -628,23 +628,25 @@ if account_id:
                     <div class="weekly-summary-grid">
                         <div class="summary-grid-box">
                             <div class="stat-label">Max DD</div>
-                            <div class="summary-value" style="color:#FF8C00; font-size:1.1rem; font-weight:bold;">{m_dd:,.2f}%</div>
+                            <div class="summary-value" style="color:#FF8C00; font-size:1.1rem; font-weight:bold; margin-top:2px;">{m_dd:,.2f}%</div>
                         </div>
                         <div class="summary-grid-box">
                             <div class="stat-label">Total Lots</div>
-                            <div class="summary-value" style="color:#FFF; font-size:1.1rem; font-weight:bold;">{t_l:,.2f}</div>
+                            <div class="summary-value" style="color:#FFF; font-size:1.1rem; font-weight:bold; margin-top:2px;">{t_l:,.2f}</div>
                         </div>
                         <div class="summary-grid-box" style="flex: 1.5; border: 2px dashed #00D4FF; background: rgba(0, 212, 255, 0.15);">
-                            <div class="stat-label">Total Profit</div>
-                            <div class="strip-profit-center" style="font-size: 2.2rem; line-height: 1;">${t_p:,.2f}</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <div class="stat-label">Total Profit</div>
+                                <div class="strip-profit-center" style="font-size: 2.3rem; line-height: 1.1; margin-top: 5px;">${t_p:,.2f}</div>
+                            </div>
                         </div>
                         <div class="summary-grid-box">
                             <div class="stat-label">Total Rebate</div>
-                            <div class="summary-value" style="color:#00D4FF; font-size:1.1rem; font-weight:bold;">${t_r:,.2f}</div>
+                            <div class="summary-value" style="color:#00D4FF; font-size:1.1rem; font-weight:bold; margin-top:2px;">${t_r:,.2f}</div>
                         </div>
                         <div class="summary-grid-box">
                             <div class="stat-label">Net Profit</div>
-                            <div class="summary-value" style="color:#00D4FF; font-size:1.1rem; font-weight:bold;">${t_n:,.2f}</div>
+                            <div class="summary-value" style="color:#00D4FF; font-size:1.1rem; font-weight:bold; margin-top:2px;">${t_n:,.2f}</div>
                         </div>
                     </div>
                     """
