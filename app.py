@@ -214,16 +214,24 @@ st.markdown("""
         opacity: 0.6;
     }
 
-    /* Summary Row Variation */
-    .summary-strip-row {
+    /* Summary Row Variation - 5 Columns Grid */
+    .weekly-summary-grid {
+        display: flex;
+        gap: 8px;
         height: 12.5vh;
-        background: linear-gradient(90deg, rgba(0, 212, 255, 0.2), transparent);
-        border: 2px dashed #00D4FF;
+        width: 100%;
+    }
+    
+    .summary-grid-box {
+        flex: 1;
+        background: rgba(0, 212, 255, 0.1);
+        border: 1px dashed #00D4FF;
         border-radius: 8px;
         display: flex;
+        flex-direction: column;
+        justify-content: center;
         align-items: center;
-        justify-content: space-between;
-        padding: 0 25px;
+        text-align: center;
     }
 
     /* Mobile Responsiveness */
@@ -244,6 +252,13 @@ st.markdown("""
         .weekly-strip-row {
             height: 11vh !important;
             padding: 0 10px !important;
+        }
+        .weekly-summary-grid {
+            height: 10vh !important;
+            gap: 4px !important;
+        }
+        .summary-grid-box .summary-value {
+            font-size: 0.8rem !important;
         }
     }
 </style>
@@ -574,10 +589,11 @@ if account_id:
                                 <div class="strip-stats-right">
                                     <div class="stat-label">Drawdown</div>
                                     <div class="stat-val-highlight">{dd:,.2f}%</div>
-                                    <div class="stat-label">Lots: <span class="stat-val-lots">{l:,.2f}</span></div>
+                                    <div style="font-size: 0.75rem; color: #E0E0E0; margin-top:2px;">
+                                        Lots: {l:,.2f} | Net: ${t:,.2f}
+                                    </div>
                                 </div>
                                 <div class="strip-footer-left">Rebate: ${r:,.2f}</div>
-                                <div class="strip-footer-right">Net: ${t:,.2f}</div>
                             </div>
                         """, unsafe_allow_html=True)
                     else:
@@ -594,7 +610,7 @@ if account_id:
                             </div>
                         """, unsafe_allow_html=True)
 
-                # 4. Summary Strip Row
+                # 4. Summary Grid Row (5 Columns)
                 wk_data = history_info[
                     (pd.to_datetime(history_info['Date']).dt.date >= work_days[0]) & 
                     (pd.to_datetime(history_info['Date']).dt.date <= work_days[-1])
@@ -606,24 +622,33 @@ if account_id:
                     t_r = wk_data['Rebate'].sum()
                     t_n = t_p + t_r
                     m_dd = wk_data['MaxDD_Day %'].max()
+                    avg_p = t_p / len(wk_data) if len(wk_data) > 0 else 0
                     
-                    st.markdown(f"""
-                        <div class="summary-strip-row">
-                            <div class="strip-date">
-                                <div style="color:#00D4FF; font-size:1rem;">WEEK SUMMARY</div>
-                            </div>
-                            <div class="strip-profit-center" style="font-size:1.8rem; color:#FFF;">
-                                ${t_p:,.2f}
-                            </div>
-                            <div class="strip-stats-right">
-                                <div class="stat-label">Max Week DD</div>
-                                <div class="stat-val-highlight" style="color:#00D4FF;">{m_dd:,.2f}%</div>
-                                <div class="stat-label">Total Lots: <span class="stat-val-lots">{t_l:,.2f}</span></div>
-                            </div>
-                            <div class="strip-footer-left">Total Rebate: ${t_r:,.2f}</div>
-                            <div class="strip-footer-right">Total Net: ${t_n:,.2f}</div>
+                    summary_html = f"""
+                    <div class="weekly-summary-grid">
+                        <div class="summary-grid-box">
+                            <div class="stat-label">Total Profit</div>
+                            <div class="summary-value" style="color:#FFF; font-size:1rem; font-weight:bold;">${t_p:,.2f}</div>
                         </div>
-                    """, unsafe_allow_html=True)
+                        <div class="summary-grid-box">
+                            <div class="stat-label">Total Lots</div>
+                            <div class="summary-value" style="color:#FFF; font-size:1rem; font-weight:bold;">{t_l:,.2f}</div>
+                        </div>
+                        <div class="summary-grid-box">
+                            <div class="stat-label">Total Rebate</div>
+                            <div class="summary-value" style="color:#00D4FF; font-size:1rem; font-weight:bold;">${t_r:,.2f}</div>
+                        </div>
+                        <div class="summary-grid-box">
+                            <div class="stat-label">Net Profit</div>
+                            <div class="summary-value" style="color:#00D4FF; font-size:1rem; font-weight:bold;">${t_n:,.2f}</div>
+                        </div>
+                        <div class="summary-grid-box" style="border: 2px dashed #00D4FF;">
+                            <div class="stat-label">Max DD</div>
+                            <div class="summary-value" style="color:#FF8C00; font-size:1rem; font-weight:bold;">{m_dd:,.2f}%</div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(summary_html, unsafe_allow_html=True)
 
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
