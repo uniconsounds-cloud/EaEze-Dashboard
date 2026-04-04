@@ -250,15 +250,34 @@ st.markdown("""
             font-size: 1.1rem !important;
         }
         .weekly-strip-row {
-            height: 11vh !important;
-            padding: 0 10px !important;
+            height: 14vh !important; /* Slightly taller on mobile to prevent overlap */
+            padding: 10px 10px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+        }
+        .strip-date {
+            font-size: 0.8rem !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .strip-footer-left {
+            position: absolute !important;
+            bottom: 5px !important;
+            left: 10px !important;
+            font-size: 0.55rem !important;
+        }
+        .strip-stats-right {
+            font-size: 0.65rem !important;
+            justify-content: center !important;
         }
         .weekly-summary-grid {
-            height: 10vh !important;
+            height: 12vh !important;
             gap: 4px !important;
         }
         .summary-grid-box .summary-value {
-            font-size: 0.8rem !important;
+            font-size: 0.75rem !important;
         }
     }
 </style>
@@ -641,7 +660,7 @@ if account_id:
                             </div>
                         </div>
                         <div class="summary-grid-box">
-                            <div class="stat-label">Total Rebate</div>
+                            <div class="stat-label">Rebate</div>
                             <div class="summary-value" style="color:#00D4FF; font-size:1.1rem; font-weight:bold; margin-top:2px;">${t_r:,.2f}</div>
                         </div>
                         <div class="summary-grid-box">
